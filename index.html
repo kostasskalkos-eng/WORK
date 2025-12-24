@@ -34,7 +34,6 @@
     body.edit-mode #exportBtn {
         display: block;
     }
-
     #exportBtn:hover {
         background: #45a049;
     }
@@ -91,17 +90,13 @@
         font-weight: bold;
     }
 
-    /* Inputs visible but disabled unless edit mode */
+    /* Inputs: always look normal */
     input[data-iso] {
         width: 45px;
         text-align: center;
         border: 1px solid #aaa;
         border-radius: 4px;
         margin-top: 3px;
-    }
-    body:not(.edit-mode) input[data-iso] {
-        pointer-events: none;
-        cursor: not-allowed;
     }
 </style>
 </head>
@@ -119,34 +114,29 @@
 <div class="calendar-container" id="calendar"></div>
 
 <script>
-/* ===========================
-   CONFIGURATION
-=========================== */
 const year = 2026;
 const hourlyRate = 5.2;
 
 const startMonth = 4; // May
 const endMonth = 9;   // October
 
-const STORAGE_KEY = "work_hours_may_oct_2026_protected_v1";
+const STORAGE_KEY = "work_hours_may_oct_2026_protected_strict_v1";
 
-/* EDIT MODE PROTECTION */
+/* EDIT MODE */
 let isEditMode = false;
 let editTimeoutId = null;
 const EDIT_KEY = "kostas2026";
 const EDIT_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
-/* ===========================
-   DATA STRUCTURES
-=========================== */
 let yearHours = 0;
 let yearMoney = 0;
-
 const monthData = {};
 
-/* ===========================
-   EDIT MODE FUNCTIONS
-=========================== */
+function updateYearTotals() {
+    document.getElementById("yearHours").textContent = yearHours.toFixed(1);
+    document.getElementById("yearMoney").textContent = yearMoney.toFixed(2);
+}
+
 function enterEditMode() {
     isEditMode = true;
     document.body.classList.add("edit-mode");
@@ -182,7 +172,7 @@ function promptForEditKey() {
     }
 }
 
-/* Keyboard shortcut: Ctrl + K */
+/* Ctrl + K unlock */
 document.addEventListener("keydown", (e) => {
     if (e.ctrlKey && (e.key === "k" || e.key === "K")) {
         e.preventDefault();
@@ -195,9 +185,7 @@ document.addEventListener("keydown", (e) => {
     }
 });
 
-/* ===========================
-   SAVE / LOAD
-=========================== */
+/* SAVE / LOAD */
 function saveData() {
     if (!isEditMode) return;
 
@@ -242,9 +230,12 @@ function loadData() {
         const td = input.closest("td");
         const monthIndex = parseInt(input.dataset.month, 10);
 
+        td.classList.remove("worked-red", "worked-green");
+
         if (value === "") {
             input.value = "";
-            td.classList.remove("worked-red", "worked-green");
+            td.dataset.prevHours = 0;
+            td.dataset.prevMoney = 0;
             return;
         }
 
@@ -258,6 +249,9 @@ function loadData() {
 
         yearHours += hours;
         yearMoney += earned;
+
+        td.dataset.prevHours = hours;
+        td.dataset.prevMoney = earned;
 
         if (hours === 0) {
             td.classList.add("worked-green");
@@ -274,17 +268,7 @@ function loadData() {
     updateYearTotals();
 }
 
-/* ===========================
-   TOTALS
-=========================== */
-function updateYearTotals() {
-    document.getElementById("yearHours").textContent = yearHours.toFixed(1);
-    document.getElementById("yearMoney").textContent = yearMoney.toFixed(2);
-}
-
-/* ===========================
-   CALENDAR GENERATION
-=========================== */
+/* CALENDAR */
 function generateCalendar() {
     const container = document.getElementById("calendar");
 
@@ -305,7 +289,6 @@ function generateCalendar() {
         `;
 
         let row = document.createElement("tr");
-
         let firstDay = (date.getDay() + 6) % 7;
         for (let i = 0; i < firstDay; i++) {
             row.appendChild(document.createElement("td"));
@@ -326,7 +309,11 @@ function generateCalendar() {
             const input = td.querySelector("input");
 
             input.addEventListener("input", () => {
-                if (!isEditMode) return;
+                if (!isEditMode) {
+                    // Hard block: revert any accidental edits
+                    input.value = td.dataset.prevHours || "";
+                    return;
+                }
 
                 const value = input.value.trim();
                 const prevHours = parseFloat(td.dataset.prevHours || 0);
@@ -395,9 +382,7 @@ function generateCalendar() {
     loadData();
 }
 
-/* ===========================
-   EXPORT
-=========================== */
+/* EXPORT */
 document.getElementById("exportBtn").addEventListener("click", () => {
     if (!isEditMode) return;
 
@@ -419,11 +404,9 @@ document.getElementById("exportBtn").addEventListener("click", () => {
     URL.revokeObjectURL(url);
 });
 
-/* ===========================
-   INIT
-=========================== */
+/* INIT */
 generateCalendar();
-exitEditMode();
+exitEditMode(); // force strict read-only on load
 </script>
 
 </body>
