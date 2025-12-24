@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="el">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Work Hours Tracker (May–October 2026)</title>
+<title>Kostas Skalkos</title>
 <style>
     body {
         font-family: Arial, sans-serif;
@@ -102,41 +102,46 @@
 </head>
 <body>
 
-<h1>Work Hours Tracker (May–October 2026)</h1>
+<h1>Kostas Skalkos</h1>
 
 <button id="exportBtn">Export to Excel</button>
 
 <div id="yearTotals">
-    Συνολικές Ώρες: <span id="yearHours">0</span> |
-    Συνολικά Χρήματα: €<span id="yearMoney">0.00</span>
+    Total Hours: <span id="yearHours">0</span> |
+    Total Money: €<span id="yearMoney">0.00</span>
 </div>
 
 <div class="calendar-container" id="calendar"></div>
 
 <script>
+/* ===========================
+   CONFIGURATION
+=========================== */
 const year = 2026;
 const hourlyRate = 5.2;
 
 const startMonth = 4; // May
 const endMonth = 9;   // October
 
-const STORAGE_KEY = "work_hours_may_oct_2026_protected_strict_v1";
+const STORAGE_KEY = "work_hours_may_oct_2026_protected_english_v1";
 
-/* EDIT MODE */
+/* EDIT MODE PROTECTION */
 let isEditMode = false;
 let editTimeoutId = null;
 const EDIT_KEY = "kostas2026";
 const EDIT_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
+/* ===========================
+   DATA STRUCTURES
+=========================== */
 let yearHours = 0;
 let yearMoney = 0;
+
 const monthData = {};
 
-function updateYearTotals() {
-    document.getElementById("yearHours").textContent = yearHours.toFixed(1);
-    document.getElementById("yearMoney").textContent = yearMoney.toFixed(2);
-}
-
+/* ===========================
+   EDIT MODE FUNCTIONS
+=========================== */
 function enterEditMode() {
     isEditMode = true;
     document.body.classList.add("edit-mode");
@@ -172,7 +177,7 @@ function promptForEditKey() {
     }
 }
 
-/* Ctrl + K unlock */
+/* Keyboard shortcut: Ctrl + K */
 document.addEventListener("keydown", (e) => {
     if (e.ctrlKey && (e.key === "k" || e.key === "K")) {
         e.preventDefault();
@@ -185,7 +190,9 @@ document.addEventListener("keydown", (e) => {
     }
 });
 
-/* SAVE / LOAD */
+/* ===========================
+   SAVE / LOAD
+=========================== */
 function saveData() {
     if (!isEditMode) return;
 
@@ -262,15 +269,32 @@ function loadData() {
 
     Object.keys(monthData).forEach(m => {
         monthData[m].summaryElement.textContent =
-            `Μήνας: ${monthData[m].hours.toFixed(1)} ώρες | €${monthData[m].money.toFixed(2)}`;
+            `Month: ${monthData[m].hours.toFixed(1)} hours | €${monthData[m].money.toFixed(2)}`;
     });
 
     updateYearTotals();
 }
 
-/* CALENDAR */
+/* ===========================
+   TOTALS
+=========================== */
+function updateYearTotals() {
+    document.getElementById("yearHours").textContent = yearHours.toFixed(1);
+    document.getElementById("yearMoney").textContent = yearMoney.toFixed(2);
+}
+
+/* ===========================
+   CALENDAR GENERATION
+=========================== */
 function generateCalendar() {
     const container = document.getElementById("calendar");
+
+    const englishMonths = [
+        "January","February","March","April","May","June",
+        "July","August","September","October","November","December"
+    ];
+
+    const englishWeekdays = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
     for (let month = startMonth; month <= endMonth; month++) {
         const date = new Date(year, month, 1);
@@ -278,17 +302,18 @@ function generateCalendar() {
         const monthBox = document.createElement("div");
         monthBox.className = "month-box";
 
-        const monthName = date.toLocaleString("el-GR", { month: "long" });
+        const monthName = englishMonths[month];
         monthBox.innerHTML = `<div class="month-title">${monthName}</div>`;
 
         const table = document.createElement("table");
-        table.innerHTML = `
-            <tr>
-                <th>Δε</th><th>Τρ</th><th>Τε</th><th>Πε</th><th>Πα</th><th>Σα</th><th>Κυ</th>
-            </tr>
-        `;
+
+        let headerRow = "<tr>";
+        englishWeekdays.forEach(d => headerRow += `<th>${d}</th>`);
+        headerRow += "</tr>";
+        table.innerHTML = headerRow;
 
         let row = document.createElement("tr");
+
         let firstDay = (date.getDay() + 6) % 7;
         for (let i = 0; i < firstDay; i++) {
             row.appendChild(document.createElement("td"));
@@ -310,7 +335,6 @@ function generateCalendar() {
 
             input.addEventListener("input", () => {
                 if (!isEditMode) {
-                    // Hard block: revert any accidental edits
                     input.value = td.dataset.prevHours || "";
                     return;
                 }
@@ -349,7 +373,7 @@ function generateCalendar() {
                 }
 
                 monthData[month].summaryElement.textContent =
-                    `Μήνας: ${monthData[month].hours.toFixed(1)} ώρες | €${monthData[month].money.toFixed(2)}`;
+                    `Month: ${monthData[month].hours.toFixed(1)} hours | €${monthData[month].money.toFixed(2)}`;
 
                 updateYearTotals();
                 saveData();
@@ -371,7 +395,7 @@ function generateCalendar() {
 
         const monthSummary = document.createElement("div");
         monthSummary.className = "month-summary";
-        monthSummary.textContent = "Μήνας: 0 ώρες | €0.00";
+        monthSummary.textContent = "Month: 0 hours | €0.00";
         monthBox.appendChild(monthSummary);
 
         monthData[month].summaryElement = monthSummary;
@@ -382,7 +406,9 @@ function generateCalendar() {
     loadData();
 }
 
-/* EXPORT */
+/* ===========================
+   EXPORT
+=========================== */
 document.getElementById("exportBtn").addEventListener("click", () => {
     if (!isEditMode) return;
 
@@ -404,9 +430,11 @@ document.getElementById("exportBtn").addEventListener("click", () => {
     URL.revokeObjectURL(url);
 });
 
-/* INIT */
+/* ===========================
+   INIT
+=========================== */
 generateCalendar();
-exitEditMode(); // force strict read-only on load
+exitEditMode();
 </script>
 
 </body>
